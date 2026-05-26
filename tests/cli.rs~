@@ -1,0 +1,64 @@
+use assert_cmd::Command;
+use predicates::prelude::*;
+use rand::{distributions::Alphanumeric, Rng};
+use std::fs;
+use tempfile::NamedTempFile;
+
+type TestResult = Result<(), Box<dyn std::error::Error>>;
+
+struct Test {
+    input: &'static str,
+    out: &'static str,
+    out_count: &'static str,
+}
+
+const PRG: &str = "uniqr";
+
+const EMPTY: Test = Test {
+    input: "tests/inputs/empty.txt",
+    out: "tests/inputs/empty.txt.out",
+    count: "tests/inputs/empty.txt.c.out",
+};
+
+fn run(test: &Test) -> TestResult {
+    let expected = fs::read_to_string(test.out)?;
+    Command::cargo_bin(PRG)?
+	.arg(test.input)
+	.assert()
+	.success()
+	.stdout(expected);
+    Ok(())
+}
+
+fn run_count(test: &Test) -> TestResult {
+    let expected = fs::read_to_string(test.count)?;
+    Command::cargo_bin(PRG)?
+	.args(&[test.input, "-c"])
+	.assert()
+	.success()
+	.stdout(expected);
+    Ok(())
+}
+
+fn run_stdin(test: &Test) -> TestResult {
+    let input = fs::read_to_string(test.input)?;
+    let expected = fs::read_to_string(test.out)?;
+    Command::Cargo_bin(PRG)?
+	.write_stdin(input)
+	.assert()
+	.success()
+	.stdout(expected);
+    Ok(())
+}
+
+fn run_stdin_count(test: &Test) -> TestResult {
+    let input = fs::read_to_string(test.input)?;
+    let expected = fs::read_to_string(test.count)?;
+    Command::Cargo_bin(PRG)?
+	.arg("--count")
+	.write_stdin(input)
+	.assert()
+	.success()
+	.stdout(expected);
+    Ok(())
+}
