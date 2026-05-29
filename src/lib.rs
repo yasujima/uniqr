@@ -2,7 +2,7 @@ use clap::{App, Arg};
 use std::{
     error::Error,
     fs::File,
-    io::{self, BufRead, BufReader, Read},
+    io::{self, BufRead, BufReader, Read, Write},
 };
 
 type MyResult<T> = Result<T, Box<dyn Error>>;
@@ -48,19 +48,26 @@ pub fn get_args() -> MyResult<Config> {
 pub fn run(config: Config) -> MyResult<()> {
     let mut file = open(&config.in_file)
 	.map_err(|e| format!("{}: {}", config.in_file, e))?;
+    let mut outfile: Box<dyn Write> = match &config.out_file {
+	Some(out_name) => Box::new(File::create(out_name)?),
+	_ => Box::new(io::stdout()),
+    };
+
+    let mut print = |count: u64, text: &str| -> MyResult<()> {
+	//内部にキャプチャーしたoutfile自体が変更するため、FnMutとする必要があり、mut print となる。
+	if count > 0 {
+	    if config.count {
+		write!(outfile, "{:>4} {}", count, text)?;
+	    } else {
+		write!(outfile, "{}", text)?;
+	    }
+	}
+	Ok(())
+    };
+        
     let mut line = String::new();
     let mut previous = String::new();
     let mut count: u64 = 0;
-
-    let print = |count: u64, text: &str| {
-	if count > 0 {
-	    if config.count {
-		print!("{:>4} {}", count, text);
-	    } else {
-		print!("{}", text);
-	    }
-	}
-    };
     
     loop {
 	let bytes = file.read_line(&mut line)?;
